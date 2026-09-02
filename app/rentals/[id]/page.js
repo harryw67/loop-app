@@ -46,7 +46,7 @@ export default function RentalThread({ params }) {
       setMyReview(review);
     }
 
-    if (r.renter_id === user.id && r.stage === 'booked') {
+    if (r.renter_id === user.id && (r.stage === 'pending' || r.stage === 'booked')) {
       fetch('/api/stripe/payment-method-status').then(res => res.json()).then(d => setHasCard(!!d.hasCard));
     }
   };
@@ -209,7 +209,13 @@ export default function RentalThread({ params }) {
             </SysBlock>
           )}
           {rental.stage === 'pending' && !isOwner && (
-            <SysBlock label="Waiting on the owner to approve your request" />
+            <SysBlock label="Waiting on the owner to approve your request">
+              {!hasCard && (
+                <p style={{ fontSize: 11.5, color: 'var(--oxblood)' }}>
+                  Add a card now so payment can be held the moment they approve — <a href="/payment-method" style={{ color: 'var(--oxblood)' }}>add one here</a>.
+                </p>
+              )}
+            </SysBlock>
           )}
           {rental.stage === 'declined' && (
             <SysBlock label="This request was declined" />
@@ -254,7 +260,11 @@ export default function RentalThread({ params }) {
 
           {rental.stage === 'return' && (
             <SysBlock label="Condition photos — at return">
-              <p style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginBottom: 10 }}>Wash or dry-clean the item before returning it — that's part of what you agreed to.</p>
+              <p style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginBottom: 10 }}>
+                {rental.listings.care_instructions
+                  ? <>Wash before returning — owner's note: <b style={{ color: 'var(--ink-soft)' }}>{rental.listings.care_instructions}</b></>
+                  : "Wash or dry-clean the item before returning it — that's part of what you agreed to."}
+              </p>
               <PhotoPicker onPick={file => uploadPhoto('after', 'front', file)} label="Front" />
               <PhotoPicker onPick={file => uploadPhoto('after', 'back', file)} label="Back" />
               <ConfirmRow
@@ -315,6 +325,7 @@ function EventBubble({ ev, me }) {
     );
   }
   if (ev.kind === 'code_confirmed') return <SysBlock label="Handoff code confirmed — both parties present" confirmed />;
+  if (ev.kind === 'payment_held') return <SysBlock label="Payment held — releases to the owner once you confirm handoff" confirmed />;
   if (ev.kind === 'payment_released') return <SysBlock label="Payment released to the owner" confirmed />;
   if (ev.kind === 'deposit_refunded') return <SysBlock label="Deposit refunded — return photos matched" confirmed />;
   if (ev.kind === 'dispute') return <SysBlock label={`Dispute raised: ${ev.payload.reason || 'condition mismatch'}`} />;
