@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --cream:#F6F2E9; --cream-2:#EFE9DB;
+  --ink:#221E19; --ink-soft:#5B5449; --ink-faint:#948C7C;
+  --line:#DAD2BF;
+  --oxblood:#7A2E2E; --oxblood-ink:#4E1D1D; --oxblood-bg:#F2E4E1;
+  --sage:#6E7A5E; --sage-ink:#3E4634; --sage-bg:#E7EBDF;
+  --mustard:#C98A2E; --mustard-ink:#6E4B18; --mustard-bg:#F5E7D0;
+  --white:#FFFDF8;
+}
+*{ box-sizing:border-box; }
+body{
+  margin:0; background:var(--cream); color:var(--ink);
+  font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.serif{ font-family:'Fraunces', serif; }
+button{ font-family:'Inter', sans-serif; cursor:pointer; }
+a{ color:inherit; }
+
+.btn{ padding:12px 18px; border-radius:2px; font-size:14px; font-weight:500; border:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.btn-primary{ background:var(--oxblood); color:var(--white); }
+.btn-primary:hover{ background:var(--oxblood-ink); }
+.btn-ghost{ border:1px solid var(--line); color:var(--ink); background:var(--white); }
+.btn-block{ width:100%; }
+
+.field label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; }
+.field input, .field textarea, .field select{
+  width:100%; border:1px solid var(--line); border-radius:2px; padding:10px 12px; font-size:14px; background:var(--white);
+}
