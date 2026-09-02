@@ -64,32 +64,63 @@ export async function POST(req, { params }) {
   }
 
   // ---- owner approves or declines a pending request ----
+  // On approval, we immediately charge and HOLD the renter's card (rental
+  // price + deposit) — the money sits with Loop, not the owner, until the
+  // handoff code is confirmed in person. This is what "agreeing = paying,
+  // held until pickup" means in practice.
   if (kind === 'approve' || kind === 'decline') {
     if (rental.stage !== 'pending') return NextResponse.json({ error: 'Nothing pending to respond to' }, { status: 400 });
     if (!isOwner) return NextResponse.json({ error: 'Only the owner can approve or decline' }, { status: 403 });
 
-    const newStage = kind === 'approve' ? 'booked' : 'declined';
-    await supabase.from('rentals').update({ stage: newStage }).eq('id', rental.id);
-    const { data } = await supabase.from('rental_events')
-      .insert({ rental_id: rental.id, kind: 'message', actor_id: user.id, payload: { text: kind === 'approve' ? 'Approved — meet up and share the handoff code below when ready.' : 'Declined this request.' } })
-      .select().single();
-    return NextResponse.json({ event: data });
+    if (kind === 'decline') {
+      await supabase.from('rentals').update({ stage: 'declined' }).eq('id', rental.id);
+      const { data } = await supabase.from('rental_events')
+        .insert({ rental_id: rental.id, kind: 'message', actor_id: user.id, payload: { text: 'Declined this request.' } })
+        .select().single();
+      return NextResponse.json({ event: data });
+    }
+
+    await supabase.from('rentals').update({ stage: 'booked' }).eq('id', rental.id);
+    await supabase.from('rental_events')
+      .insert({ rental_id: rental.id, kind: 'message', actor_id: user.id, payload: { text: 'Approved — meet up and share the handoff code below when ready.' } });
+
+    const held = await createPaymentHolds(supabase, rental);
+    if (held) {
+      await supabase.from('rental_events').insert({ rental_id: rental.id, kind: 'payment_held', actor_id: null, payload: {} });
+    } else {
+      await supabase.from('rental_events').insert({
+        rental_id: rental.id, kind: 'message', actor_id: null,
+        payload: { text: "Renter hasn't added a payment method yet — funds will be held as soon as they do.", system: true },
+      });
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   // ---- handoff code: renter enters the 4-digit code the owner shows them ----
-  // The owner already photographed the item when listing it, so this single
-  // matching action stands in for "both parties confirmed the handoff" —
-  // it triggers payment immediately.
+  // Releases the already-held rental payment to the owner (minus our cut).
+  // If the hold somehow wasn't created at approval time (e.g. renter added
+  // their card after approving), we create and immediately capture it here
+  // as a fallback.
   if (kind === 'code_confirmed') {
     if (rental.stage !== 'booked') return NextResponse.json({ error: 'Wrong stage for a handoff code' }, { status: 400 });
     if (!isRenter) return NextResponse.json({ error: 'Only the renter enters the code' }, { status: 403 });
     if (body.code !== rental.qr_token) return NextResponse.json({ error: "That code doesn't match — check with the owner." }, { status: 400 });
 
-    const now = new Date().toISOString();
-    await supabase.from('rentals').update({ handoff_confirmed_at: now }).eq('id', rental.id);
-    await supabase.from('rental_events').insert({ rental_id: rental.id, kind: 'code_confirmed', actor_id: user.id, payload: {} });
+    let rentalIntentId = rental.rental_payment_intent_id;
+    if (!rentalIntentId) {
+      const held = await createPaymentHolds(supabase, rental);
+      if (!held) return NextResponse.json({ error: 'Add a payment method to complete this handoff.' }, { status: 400 });
+      rentalIntentId = held.rentalIntentId;
+    }
 
-    await handleHandoffConfirmed(supabase, rental);
+    await stripe.paymentIntents.capture(rentalIntentId);
+
+    const now = new Date().toISOString();
+    await supabase.from('rentals').update({ stage: 'out', handoff_confirmed_at: now }).eq('id', rental.id);
+    await supabase.from('rental_events').insert({ rental_id: rental.id, kind: 'code_confirmed', actor_id: user.id, payload: {} });
+    await supabase.from('rental_events').insert({ rental_id: rental.id, kind: 'payment_released', actor_id: null, payload: {} });
+
     return NextResponse.json({ ok: true });
   }
 
@@ -150,21 +181,18 @@ export async function POST(req, { params }) {
   return NextResponse.json({ error: 'Unknown event kind' }, { status: 400 });
 }
 
-// Handoff code matched: charge the rental price to the renter,
-// authorize (but don't capture) the deposit hold, move stage to 'out'.
-async function handleHandoffConfirmed(supabase, rental) {
+// Authorizes (holds, doesn't release) the rental price against the renter's
+// card as a destination charge — the transfer to the owner's connected
+// account only actually happens later, when we capture it. Also authorizes
+// the deposit as a separate hold with no destination (stays with Loop until
+// the return is confirmed clean, or a dispute captures part of it).
+// Returns null if the renter has no card on file yet.
+async function createPaymentHolds(supabase, rental) {
   const { data: renterProfile } = await supabase.from('profiles').select('*').eq('id', rental.renter_id).single();
   const { data: ownerProfile } = await supabase.from('profiles').select('*').eq('id', rental.owner_id).single();
   const listing = rental.listings;
 
-  if (!renterProfile?.stripe_customer_id || !renterProfile?.default_payment_method_id) {
-    await supabase.from('rental_events').insert({
-      rental_id: rental.id, kind: 'message', actor_id: null,
-      payload: { text: 'Add a payment method to complete this handoff.', system: true },
-    });
-    await supabase.from('rentals').update({ stage: 'out' }).eq('id', rental.id);
-    return;
-  }
+  if (!renterProfile?.stripe_customer_id || !renterProfile?.default_payment_method_id) return null;
 
   const rentalIntent = await stripe.paymentIntents.create({
     amount: listing.price_cents,
@@ -173,6 +201,7 @@ async function handleHandoffConfirmed(supabase, rental) {
     payment_method: renterProfile.default_payment_method_id,
     off_session: true,
     confirm: true,
+    capture_method: 'manual',
     transfer_data: ownerProfile?.stripe_account_id ? { destination: ownerProfile.stripe_account_id } : undefined,
     application_fee_amount: Math.round(listing.price_cents * 0.15),
   });
@@ -188,14 +217,11 @@ async function handleHandoffConfirmed(supabase, rental) {
   });
 
   await supabase.from('rentals').update({
-    stage: 'out',
     rental_payment_intent_id: rentalIntent.id,
     deposit_payment_intent_id: depositIntent.id,
   }).eq('id', rental.id);
 
-  await supabase.from('rental_events').insert({
-    rental_id: rental.id, kind: 'payment_released', actor_id: null, payload: {},
-  });
+  return { rentalIntentId: rentalIntent.id, depositIntentId: depositIntent.id };
 }
 
 // Both sides confirmed return: release (cancel) the deposit authorization
