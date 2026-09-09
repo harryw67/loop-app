@@ -2,7 +2,7 @@ export default function PrivacyPage() {
   return (
     <div style={{ maxWidth: 680, fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.7 }}>
       <h1 style={{ fontSize: 26, fontWeight: 500, marginBottom: 6, color: 'var(--ink)' }}>Privacy Policy</h1>
-      <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginBottom: 24 }}>Last updated: [DATE]</p>
+      <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginBottom: 24 }}>Last updated: September 9, 2026</p>
 
       <div style={{ padding: 14, background: 'var(--mustard-bg)', borderRadius: 6, marginBottom: 26, fontSize: 12.5, color: 'var(--mustard-ink)' }}>
         This is a draft prepared without review by a licensed attorney or privacy specialist.
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Your choices">
-        You can edit most of your profile information at any time. You can request account deletion by contacting us at [CONTACT EMAIL]. Some records (such as transaction history) may be retained as required for legal, tax, or fraud-prevention purposes even after account deletion.
+        You can edit most of your profile information at any time. You can request account deletion by contacting us at h11131719@gmail.com. Some records (such as transaction history) may be retained as required for legal, tax, or fraud-prevention purposes even after account deletion.
       </Section>
 
       <Section title="Children's privacy">
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Contact">
-        Questions about this policy can be sent to [CONTACT EMAIL].
+        Questions about this policy can be sent to h11131719@gmail.com.
       </Section>
     </div>
   );

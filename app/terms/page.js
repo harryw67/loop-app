@@ -2,7 +2,7 @@ export default function TermsPage() {
   return (
     <div style={{ maxWidth: 680, fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.7 }}>
       <h1 style={{ fontSize: 26, fontWeight: 500, marginBottom: 6, color: 'var(--ink)' }}>Terms of Service</h1>
-      <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginBottom: 24 }}>Last updated: [DATE]</p>
+      <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginBottom: 24 }}>Last updated: September 9, 2026</p>
 
       <div style={{ padding: 14, background: 'var(--mustard-bg)', borderRadius: 6, marginBottom: 26, fontSize: 12.5, color: 'var(--mustard-ink)' }}>
         This is a draft prepared without review by a licensed attorney. It's here so the terms governing Loop are transparent while the business finalizes its official legal documents.
@@ -77,7 +77,7 @@ export default function TermsPage() {
       </Section>
 
       <Section title="20–25. Dispute Resolution, Governing Law & General Terms">
-        These Terms are governed by the laws of [STATE]. They may be updated from time to time, with notice provided for material changes. Questions can be sent to [CONTACT EMAIL].
+        These Terms are governed by the laws of South Carolina. They may be updated from time to time, with notice provided for material changes. Questions can be sent to h11131719@gmail.com.
       </Section>
     </div>
   );

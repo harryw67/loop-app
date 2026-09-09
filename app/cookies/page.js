@@ -2,7 +2,7 @@ export default function CookiesPage() {
   return (
     <div style={{ maxWidth: 680, fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.7 }}>
       <h1 style={{ fontSize: 26, fontWeight: 500, marginBottom: 6, color: 'var(--ink)' }}>Cookies</h1>
-      <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginBottom: 24 }}>Last updated: [DATE]</p>
+      <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginBottom: 24 }}>Last updated: September 9, 2026</p>
 
       <p style={{ marginBottom: 20 }}>
         Loop uses cookies only to keep you signed in — nothing more. We don't use advertising cookies, don't run third-party ad trackers, and don't sell any data collected through cookies, because we don't collect any beyond what's needed to run the Service.
