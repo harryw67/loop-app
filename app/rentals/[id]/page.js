@@ -32,6 +32,7 @@ export default function RentalThread({ params }) {
   const [noShowDisputeReason, setNoShowDisputeReason] = useState('');
   const [meetupSpot, setMeetupSpot] = useState(null);
   const [meetupStatus, setMeetupStatus] = useState('idle');
+  const sendingRef = useRef(false);
   const bodyRef = useRef(null);
 
   const load = async () => {
@@ -97,7 +98,6 @@ export default function RentalThread({ params }) {
   const other = isOwner ? rental.renter : rental.owner;
   const otherId = isOwner ? rental.renter_id : rental.owner_id;
 
-  const sendingRef = useRef(false);
   const post = async (payload) => {
     if (sendingRef.current) return; // prevents duplicate sends from rapid/double clicks
     sendingRef.current = true;
